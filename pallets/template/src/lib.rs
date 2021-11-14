@@ -23,19 +23,19 @@ type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 #[pallet::event]
 #[pallet::generate_deposit(pub(super) fn deposit_event)]
 pub enum Event<T: Config> {
-  /// Event emitted when a proof has been claimed. [who, claim]
-  ClaimCreated(T::AccountId, Vec<u8>),
-  /// Event emitted when a claim is revoked by the owner. [who, claim]
-  ClaimRevoked(T::AccountId, Vec<u8>),
+  /// Event emitted when a proof has been complianced. [who, compliance]
+  ComplianceCreated(T::AccountId, Vec<u8>),
+  /// Event emitted when a compliance is revoked by the owner. [who, compliance]
+  ComplianceRevoked(T::AccountId, Vec<u8>),
 }
 
 #[pallet::error]
 pub enum Error<T> {
-  /// The proof has already been claimed.
-  ProofAlreadyClaimed,
+  /// The proof has already been complianced.
+  ProofAlreadyComplianced,
   /// The proof does not exist, so it cannot be revoked.
   NoSuchProof,
-  /// The proof is claimed by another account, so caller can't revoke it.
+  /// The proof is complianced by another account, so caller can't revoke it.
   NotProofOwner,
 }
   
@@ -56,7 +56,7 @@ impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 #[pallet::call]
 impl<T: Config> Pallet<T> {
   #[pallet::weight(1_000)]
-  pub fn create_claim(
+  pub fn create_compliance(
     origin: OriginFor<T>,
     proof: Vec<u8>,
     ) -> DispatchResult {
@@ -65,8 +65,8 @@ impl<T: Config> Pallet<T> {
       // https://docs.substrate.io/v3/runtime/origins
       let sender = ensure_signed(origin)?;
 
-      // Verify that the specified proof has not already been claimed.
-      ensure!(!Proofs::<T>::contains_key(&proof), Error::<T>::ProofAlreadyClaimed);
+      // Verify that the specified proof has not already been complianced.
+      ensure!(!Proofs::<T>::contains_key(&proof), Error::<T>::ProofAlreadyComplianced);
 
       // Get the block number from the FRAME System pallet.
       let current_block = <frame_system::Pallet<T>>::block_number();
@@ -74,14 +74,14 @@ impl<T: Config> Pallet<T> {
       // Store the proof with the sender and block number.
       Proofs::<T>::insert(&proof, (&sender, current_block));
 
-      // Emit an event that the claim was created.
-      Self::deposit_event(Event::ClaimCreated(sender, proof));
+      // Emit an event that the compliance was created.
+      Self::deposit_event(Event::ComplianceCreated(sender, proof));
 
       Ok(())
       }
 
       #[pallet::weight(10_000)]
-      pub fn revoke_claim(
+      pub fn revoke_compliance(
         origin: OriginFor<T>,
         proof: Vec<u8>,
         ) -> DispatchResult {
@@ -90,20 +90,20 @@ impl<T: Config> Pallet<T> {
           // https://docs.substrate.io/v3/runtime/origins
           let sender = ensure_signed(origin)?;
 
-          // Verify that the specified proof has been claimed.
+          // Verify that the specified proof has been complianced.
           ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);
 
-          // Get owner of the claim.
+          // Get owner of the compliance.
           let (owner, _) = Proofs::<T>::get(&proof);
 
-          // Verify that sender of the current call is the claim owner.
+          // Verify that sender of the current call is the compliance owner.
           ensure!(sender == owner, Error::<T>::NotProofOwner);
 
-          // Remove claim from storage.
+          // Remove compliance from storage.
           Proofs::<T>::remove(&proof);
 
-          // Emit an event that the claim was erased.
-          Self::deposit_event(Event::ClaimRevoked(sender, proof));
+          // Emit an event that the compliance was erased.
+          Self::deposit_event(Event::ComplianceRevoked(sender, proof));
           Ok(())
         }
   }
